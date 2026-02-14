@@ -272,9 +272,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onOpenBo
           {activeTab === 'users' && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                <StatCard label="Active Users" value={stats.totalUsers} icon={<path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />} color="text-blue-600 bg-blue-50 dark:bg-blue-900/20" />
-                <StatCard label="Total Bot Accounts" value={stats.totalBots} icon={<path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />} color="text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20" />
-                <StatCard label="Pending Requests" value={stats.pendingTrans} icon={<path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />} color="text-amber-600 bg-amber-50 dark:bg-amber-900/20" />
+                <StatCard 
+                  label="Active Users" 
+                  value={stats.totalUsers} 
+                  icon={
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-6 h-6">
+                      <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                  } 
+                  color="text-blue-600 bg-blue-50 dark:bg-blue-900/20" 
+                />
+                <StatCard 
+                  label="Total Bot Accounts" 
+                  value={stats.totalBots} 
+                  icon={
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-6 h-6">
+                      <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  } 
+                  color="text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20" 
+                />
+                <StatCard 
+                  label="Pending Requests" 
+                  value={stats.pendingTrans} 
+                  icon={
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-6 h-6">
+                      <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  } 
+                  color="text-amber-600 bg-amber-50 dark:bg-amber-900/20" 
+                />
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-[32px] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
                 <div className="p-6 border-b dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -401,7 +429,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onOpenBo
 
 const StatCard: React.FC<{ label: string; value: string | number; icon: React.ReactNode; color: string }> = ({ label, value, icon, color }) => (
   <div className="bg-white dark:bg-gray-800 p-6 rounded-[32px] shadow-sm border border-gray-50 dark:border-gray-700 flex items-center">
-    <div className={`p-4 rounded-2xl mr-4 ${color}`}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>{icon}</svg></div>
+    <div className={`p-4 rounded-2xl mr-4 ${color}`}>{icon}</div>
     <div>
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-1">{label}</p>
       <p className="text-xl font-black dark:text-white leading-none">{value}</p>
