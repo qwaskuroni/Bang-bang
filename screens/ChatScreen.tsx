@@ -128,10 +128,37 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ chatId, currentUser, onB
     }
   };
 
+  const sendWelcomeMessage = async () => {
+    if (!otherUser?.welcomeMessage) return;
+    
+    setIsBotTyping(true);
+    setTimeout(async () => {
+      await addDoc(collection(db, 'chats', chatId, 'messages'), {
+        chatId,
+        senderPhone: otherUser.phone,
+        text: otherUser.welcomeMessage,
+        type: 'text',
+        timestamp: serverTimestamp(),
+        seen: false
+      });
+      await updateDoc(doc(db, 'chats', chatId), { 
+        lastMessage: otherUser.welcomeMessage, 
+        lastMessageTime: serverTimestamp() 
+      });
+      setIsBotTyping(false);
+    }, 1200);
+  };
+
   const checkAutoReply = async (userText: string) => {
     if (!otherUser?.isBot) return;
 
-    const repliesSnap = await getDocs(collection(db, 'auto_replies'));
+    // Check if it's the first user message in this session to send welcome message
+    // Use a flag to avoid repeating welcome message if otherUser.welcomeMessage exists
+    const userMsgs = messages.filter(m => m.senderPhone === currentUser.phone);
+    const isFirstMessage = userMsgs.length === 1; // It's 1 because handleSend just added it
+
+    // FETCH BOT-SPECIFIC REPLIES
+    const repliesSnap = await getDocs(collection(db, 'users', otherUser.phone, 'auto_replies'));
     const replies = repliesSnap.docs.map(doc => doc.data() as AutoReply);
     const matchedReply = replies.find(r => userText.toLowerCase().includes(r.keyword.toLowerCase()));
 
@@ -150,7 +177,11 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ chatId, currentUser, onB
         setIsBotTyping(false);
       }, 1000);
     } else {
-      handleChatGPTResponse(userText);
+      if (isFirstMessage && otherUser.welcomeMessage) {
+        sendWelcomeMessage();
+      } else {
+        handleChatGPTResponse(userText);
+      }
     }
   };
 
@@ -163,6 +194,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ chatId, currentUser, onB
     if (!inputText.trim()) return;
     const text = inputText;
     setInputText('');
+    
+    // Check if it's the first message before sending the current one
+    const isFirstUserMessage = messages.filter(m => m.senderPhone === currentUser.phone).length === 0;
+
     await addDoc(collection(db, 'chats', chatId, 'messages'), {
       chatId,
       senderPhone: currentUser.phone,
@@ -172,7 +207,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ chatId, currentUser, onB
       seen: false
     });
     await updateDoc(doc(db, 'chats', chatId), { lastMessage: text, lastMessageTime: serverTimestamp() });
-    checkAutoReply(text);
+    
+    if (otherUser?.isBot) {
+        if (isFirstUserMessage && otherUser.welcomeMessage) {
+            sendWelcomeMessage();
+        } else {
+            checkAutoReply(text);
+        }
+    }
   };
 
   const currentRate = pendingCallType === 'video' 
@@ -191,7 +233,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ chatId, currentUser, onB
             onClick={() => setShowBotProfile(true)}
             className="flex items-center ml-2 min-w-0 cursor-pointer active:opacity-70 transition-opacity"
           >
-            <img src={otherUser?.profileImage} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="" />
+            <div className="relative">
+              <img src={otherUser?.profileImage} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="" />
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-950 rounded-full"></div>
+            </div>
             <div className="ml-3 truncate">
               <h3 className="font-bold text-gray-800 dark:text-white leading-tight flex items-center truncate">
                 {otherUser?.name}
@@ -268,7 +313,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ chatId, currentUser, onB
       </div>
 
       {/* Modals & Dialogs (Low balance, profiles, etc.) */}
-      {/* ... keeping other modals same as previous version ... */}
       {showLowBalanceModal && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center p-6 animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowLowBalanceModal(false)} />

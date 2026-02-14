@@ -24,6 +24,7 @@ export interface User {
   botVideoCallPrice?: number;
   botAudioCallPrice?: number;
   lastClaimDate?: string;
+  welcomeMessage?: string; // Added welcome message for bots
 }
 
 export interface Group {
@@ -59,7 +60,7 @@ export interface WalletSettings {
   minDeposit: number;
   minWithdraw: number;
   dailyReward?: number;
-  groupsEnabled?: boolean; // Added: Control visibility of Groups menu
+  groupsEnabled?: boolean;
 }
 
 export interface Message {
@@ -90,4 +91,4 @@ export interface AutoReply {
   response: string;
 }
 
-export type View = 'chats' | 'calls' | 'contacts' | 'groups' | 'create-group' | 'profile' | 'admin' | 'bot-settings' | 'bot-ai-config' | 'bot-video-config' | 'bot-call-rate-config' | 'active-call' | 'wallet-deposit' | 'wallet-withdraw' | 'wallet-history' | 'group-chat' | 'group-profile';
+export type View = 'chats' | 'calls' | 'contacts' | 'groups' | 'create-group' | 'profile' | 'admin' | 'bot-settings' | 'bot-ai-config' | 'bot-video-config' | 'bot-call-rate-config' | 'bot-welcome-config' | 'bot-auto-reply-config' | 'active-call' | 'wallet-deposit' | 'wallet-withdraw' | 'wallet-history' | 'group-chat' | 'group-profile';

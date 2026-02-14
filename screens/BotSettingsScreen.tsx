@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { db } from '../firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 interface BotSettingsScreenProps {
   botPhone: string;
@@ -10,14 +10,25 @@ interface BotSettingsScreenProps {
   onOpenAiConfig: () => void;
   onOpenVideoConfig: () => void;
   onOpenCallRateConfig: () => void;
+  onOpenWelcomeConfig: () => void;
+  onOpenAutoReplyConfig: () => void;
 }
 
-export const BotSettingsScreen: React.FC<BotSettingsScreenProps> = ({ botPhone, onBack, onOpenAiConfig, onOpenVideoConfig, onOpenCallRateConfig }) => {
+export const BotSettingsScreen: React.FC<BotSettingsScreenProps> = ({ 
+  botPhone, 
+  onBack, 
+  onOpenAiConfig, 
+  onOpenVideoConfig, 
+  onOpenCallRateConfig, 
+  onOpenWelcomeConfig,
+  onOpenAutoReplyConfig 
+}) => {
   const [bot, setBot] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [editName, setEditName] = useState('');
   const [editImage, setEditImage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchBot = async () => {
@@ -42,12 +53,28 @@ export const BotSettingsScreen: React.FC<BotSettingsScreenProps> = ({ botPhone, 
         profileImage: editImage
       });
       alert("Bot Profile Updated!");
-      // Update local state to show change
       if (bot) setBot({ ...bot, name: editName, profileImage: editImage });
     } catch (err) {
       alert("Update failed");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteBot = async () => {
+    if (!window.confirm(`Are you absolutely sure you want to PERMANENTLY DELETE this bot (${bot?.name})? All settings and data will be lost.`)) {
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'users', botPhone));
+      alert("Bot Deleted Successfully");
+      onBack(); // Go back to admin dashboard
+    } catch (err) {
+      alert("Delete failed");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -111,6 +138,42 @@ export const BotSettingsScreen: React.FC<BotSettingsScreenProps> = ({ botPhone, 
         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] ml-2">Configuration Modules</h3>
         
         <button 
+          onClick={onOpenWelcomeConfig}
+          className="w-full flex items-center justify-between p-5 bg-white dark:bg-gray-800 rounded-[28px] shadow-sm active:scale-[0.98] transition-all border border-gray-100 dark:border-gray-700"
+        >
+          <div className="flex items-center text-gray-700 dark:text-gray-200">
+            <div className="p-3 bg-pink-50 dark:bg-pink-900/30 rounded-2xl mr-4">
+              <svg className="w-6 h-6 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+            </div>
+            <div>
+              <span className="font-black text-sm block">Welcome Message</span>
+              <p className="text-[10px] text-gray-400 font-medium">Set initial bot greeting</p>
+            </div>
+          </div>
+          <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+        </button>
+
+        <button 
+          onClick={onOpenAutoReplyConfig}
+          className="w-full flex items-center justify-between p-5 bg-white dark:bg-gray-800 rounded-[28px] shadow-sm active:scale-[0.98] transition-all border border-gray-100 dark:border-gray-700"
+        >
+          <div className="flex items-center text-gray-700 dark:text-gray-200">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-2xl mr-4">
+              <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+            </div>
+            <div>
+              <span className="font-black text-sm block">Keyword Auto Reply</span>
+              <p className="text-[10px] text-gray-400 font-medium">Set pattern based replies</p>
+            </div>
+          </div>
+          <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+        </button>
+
+        <button 
           onClick={onOpenAiConfig}
           className="w-full flex items-center justify-between p-5 bg-white dark:bg-gray-800 rounded-[28px] shadow-sm active:scale-[0.98] transition-all border border-gray-100 dark:border-gray-700"
         >
@@ -163,6 +226,28 @@ export const BotSettingsScreen: React.FC<BotSettingsScreenProps> = ({ botPhone, 
           </div>
           <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
         </button>
+
+        {/* Danger Zone */}
+        <div className="pt-8 mt-4 border-t border-red-100 dark:border-red-900/30">
+          <h3 className="text-[10px] font-black text-red-500 uppercase tracking-[0.2em] ml-2 mb-4">Danger Zone</h3>
+          <button 
+            disabled={isDeleting}
+            onClick={handleDeleteBot}
+            className="w-full flex items-center justify-between p-5 bg-red-50 dark:bg-red-900/10 rounded-[28px] shadow-sm active:scale-[0.98] transition-all border border-red-100 dark:border-red-900/20"
+          >
+            <div className="flex items-center text-red-600">
+              <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-2xl mr-4">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div>
+                <span className="font-black text-sm block">{isDeleting ? 'Deleting...' : 'Delete Bot Account'}</span>
+                <p className="text-[10px] text-red-400 font-medium">This action cannot be undone</p>
+              </div>
+            </div>
+          </button>
+        </div>
       </div>
     </div>
   );

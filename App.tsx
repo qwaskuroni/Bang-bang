@@ -11,6 +11,8 @@ import { BotSettingsScreen } from './screens/BotSettingsScreen';
 import { BotAiConfigScreen } from './screens/BotAiConfigScreen';
 import { BotVideoConfigScreen } from './screens/BotVideoConfigScreen';
 import { BotCallRateConfigScreen } from './screens/BotCallRateConfigScreen';
+import { BotWelcomeConfigScreen } from './screens/BotWelcomeConfigScreen';
+import { BotAutoReplyConfigScreen } from './screens/BotAutoReplyConfigScreen';
 import { CallScreen } from './screens/CallScreen';
 import { User, View } from './types';
 import { db } from './firebase';
@@ -57,6 +59,9 @@ const App: React.FC = () => {
     const unsub = onSnapshot(doc(db, 'users', currentUser.phone), (docSnap) => {
       if (docSnap.exists()) {
         const freshData = docSnap.data() as User;
+        if (freshData.isBlocked) {
+           // Optional: Log out if blocked? Usually just restrict messaging
+        }
         if (JSON.stringify(freshData) !== JSON.stringify(currentUser)) {
           setCurrentUser(freshData);
           localStorage.setItem('imo_user', JSON.stringify(freshData));
@@ -97,6 +102,8 @@ const App: React.FC = () => {
           onOpenAiConfig={() => setActiveView('bot-ai-config')}
           onOpenVideoConfig={() => setActiveView('bot-video-config')}
           onOpenCallRateConfig={() => setActiveView('bot-call-rate-config')}
+          onOpenWelcomeConfig={() => setActiveView('bot-welcome-config')}
+          onOpenAutoReplyConfig={() => setActiveView('bot-auto-reply-config')}
         />
       );
     }
@@ -119,6 +126,22 @@ const App: React.FC = () => {
     if (activeView === 'bot-call-rate-config' && activeBotPhone) {
       return (
         <BotCallRateConfigScreen 
+          botPhone={activeBotPhone}
+          onBack={() => setActiveView('bot-settings')}
+        />
+      );
+    }
+    if (activeView === 'bot-welcome-config' && activeBotPhone) {
+      return (
+        <BotWelcomeConfigScreen 
+          botPhone={activeBotPhone}
+          onBack={() => setActiveView('bot-settings')}
+        />
+      );
+    }
+    if (activeView === 'bot-auto-reply-config' && activeBotPhone) {
+      return (
+        <BotAutoReplyConfigScreen 
           botPhone={activeBotPhone}
           onBack={() => setActiveView('bot-settings')}
         />
