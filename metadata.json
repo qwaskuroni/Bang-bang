@@ -1,0 +1,8 @@
+{
+  "name": "ImoFlow - Modern Mobile Messenger",
+  "description": "A high-performance, mobile-first messaging application with real-time Firestore integration, featuring a clean blue gradient UI, phone-based login, and premium animations.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
