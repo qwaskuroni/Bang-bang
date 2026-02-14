@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, doc, setDoc, updateDoc, runTransaction, orderBy, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, setDoc, updateDoc, runTransaction, orderBy, addDoc, serverTimestamp, deleteDoc, getDoc } from 'firebase/firestore';
 import { User, Transaction, WalletSettings, Chat, Message } from '../types';
 
 interface AdminDashboardProps {
@@ -18,6 +18,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onOpenBo
   const [walletSettings, setWalletSettings] = useState<WalletSettings>({
     bkashNumber: '', nagadNumber: '', rocketNumber: '', minDeposit: 100, minWithdraw: 500, dailyReward: 5, groupsEnabled: true
   });
+
+  // Create Bot States
+  const [showCreateBot, setShowCreateBot] = useState(false);
+  const [newBotName, setNewBotName] = useState('');
+  const [newBotPhone, setNewBotPhone] = useState('');
+  const [newBotSeed, setNewBotSeed] = useState('');
+  const [newBotImageUrl, setNewBotImageUrl] = useState('');
+  const [isCreatingBot, setIsCreatingBot] = useState(false);
 
   // Chat Monitoring states
   const [botChats, setBotChats] = useState<Chat[]>([]);
@@ -91,6 +99,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onOpenBo
       await updateDoc(doc(db, 'settings', 'wallet'), { groupsEnabled: newVal });
     } catch (err) {
       alert("Failed to update group visibility");
+    }
+  };
+
+  const handleCreateBot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBotName || !newBotPhone) return;
+    setIsCreatingBot(true);
+    try {
+      const userRef = doc(db, 'users', newBotPhone);
+      const snap = await getDoc(userRef);
+      if (snap.exists()) {
+        alert("User or Bot with this phone already exists!");
+        return;
+      }
+
+      const profileImage = newBotImageUrl.trim() || `https://api.dicebear.com/7.x/avataaars/svg?seed=${newBotSeed || newBotName}`;
+
+      await setDoc(userRef, {
+        name: newBotName,
+        phone: newBotPhone,
+        isBot: true,
+        online: true,
+        balance: 0,
+        profileImage: profileImage,
+        createdAt: serverTimestamp(),
+        lastSeen: serverTimestamp(),
+        isAiEnabled: false,
+        botCallDuration: 60,
+        botMaxCallsPerUser: 5,
+        botCallPrice: 5,
+        botVideoCallPrice: 10,
+        botAudioCallPrice: 5
+      });
+
+      alert("Bot Created Successfully!");
+      setShowCreateBot(false);
+      setNewBotName('');
+      setNewBotPhone('');
+      setNewBotSeed('');
+      setNewBotImageUrl('');
+    } catch (err) {
+      alert("Error creating bot");
+    } finally {
+      setIsCreatingBot(false);
     }
   };
 
@@ -235,6 +287,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onOpenBo
               {activeTab === 'groups-control' ? 'Group Feature Control' : `${activeTab} Management`}
             </h2>
           </div>
+          {activeTab === 'users' && (
+            <button 
+              onClick={() => setShowCreateBot(true)}
+              className="bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-lg shadow-blue-500/30 flex items-center active:scale-95 transition-all"
+            >
+              <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
+              Add New Bot
+            </button>
+          )}
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 lg:p-8 no-scrollbar relative h-full">
@@ -423,6 +484,90 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack, onOpenBo
           )}
         </main>
       </div>
+
+      {/* Create Bot Modal */}
+      {showCreateBot && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCreateBot(false)} />
+           <div className="relative bg-white dark:bg-gray-900 w-full max-w-md rounded-[40px] p-8 shadow-2xl animate-in zoom-in-95 duration-200 border border-white/20">
+              <div className="text-center mb-8">
+                 <h2 className="text-2xl font-black dark:text-white">Create New Bot</h2>
+                 <p className="text-sm text-gray-500 mt-2">নতুন বট ইউজার তৈরি করুন।</p>
+              </div>
+
+              <form onSubmit={handleCreateBot} className="space-y-6">
+                 <div className="flex flex-col items-center mb-4">
+                    <img 
+                      src={newBotImageUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${newBotSeed || newBotName || 'default'}`} 
+                      className="w-20 h-20 rounded-[28px] bg-gray-100 p-2 shadow-inner mb-4 object-cover" 
+                      alt="" 
+                    />
+                    <div className="flex flex-col space-y-2 w-full">
+                       <input 
+                        type="text" 
+                        placeholder="Image URL (Direct link)" 
+                        value={newBotImageUrl}
+                        onChange={e => setNewBotImageUrl(e.target.value)}
+                        className="bg-gray-50 dark:bg-gray-800 text-[10px] p-3 rounded-xl outline-none dark:text-white w-full border border-gray-100 dark:border-gray-700"
+                      />
+                      {!newBotImageUrl && (
+                        <input 
+                          type="text" 
+                          placeholder="Or DiceBear Seed" 
+                          value={newBotSeed}
+                          onChange={e => setNewBotSeed(e.target.value)}
+                          className="bg-gray-50 dark:bg-gray-800 text-[10px] p-2 rounded-xl outline-none dark:text-white w-full text-center"
+                        />
+                      )}
+                    </div>
+                 </div>
+
+                 <div className="space-y-4">
+                    <div>
+                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Bot Name</label>
+                       <input 
+                         required
+                         type="text" 
+                         value={newBotName}
+                         onChange={e => setNewBotName(e.target.value)}
+                         className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-blue-500/30 dark:text-white font-bold" 
+                         placeholder="Enter Bot Name" 
+                       />
+                    </div>
+                    <div>
+                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1 mb-1 block">Phone Number (ID)</label>
+                       <input 
+                         required
+                         type="tel" 
+                         maxLength={11}
+                         value={newBotPhone}
+                         onChange={e => setNewBotPhone(e.target.value.replace(/\D/g, ''))}
+                         className="w-full bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl outline-none border-2 border-transparent focus:border-blue-500/30 dark:text-white font-bold" 
+                         placeholder="017XXXXXXXX" 
+                       />
+                    </div>
+                 </div>
+
+                 <div className="pt-4 space-y-3">
+                    <button 
+                      disabled={isCreatingBot}
+                      type="submit" 
+                      className="w-full blue-gradient text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+                    >
+                       {isCreatingBot ? 'Creating...' : 'Create Bot Account'}
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setShowCreateBot(false)}
+                      className="w-full text-xs font-bold text-gray-400 py-2"
+                    >
+                      Cancel
+                    </button>
+                 </div>
+              </form>
+           </div>
+        </div>
+      )}
     </div>
   );
 };
