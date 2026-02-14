@@ -4,6 +4,7 @@ import { SplashScreen } from './screens/SplashScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { ChatScreen } from './screens/ChatScreen';
+import { GroupChatScreen } from './screens/GroupChatScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
 import { AdminDashboard } from './screens/AdminDashboard';
 import { BotSettingsScreen } from './screens/BotSettingsScreen';
@@ -22,6 +23,7 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [activeView, setActiveView] = useState<View>('chats');
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   const [activeBotPhone, setActiveBotPhone] = useState<string | null>(null);
   const [callData, setCallData] = useState<{ bot: User; chatId: string; callType: 'audio' | 'video' } | null>(null);
   const [darkMode, setDarkMode] = useState(false);
@@ -147,6 +149,12 @@ const App: React.FC = () => {
             setActiveView(view);
           }}
         />
+      ) : activeGroupId ? (
+        <GroupChatScreen
+          groupId={activeGroupId}
+          currentUser={currentUser}
+          onBack={() => setActiveGroupId(null)}
+        />
       ) : activeView === 'profile' ? (
         <ProfileScreen 
           user={currentUser} 
@@ -165,6 +173,7 @@ const App: React.FC = () => {
           activeView={activeView} 
           setActiveView={setActiveView} 
           onSelectChat={setActiveChatId} 
+          onSelectGroup={setActiveGroupId}
         />
       )}
     </div>

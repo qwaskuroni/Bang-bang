@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
-import { User } from '../types';
+import React, { useState, useEffect } from 'react';
+import { User, WalletSettings } from '../types';
 import { db } from '../firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot, runTransaction, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 interface ProfileScreenProps {
   user: User;
@@ -26,6 +26,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(user.name);
   const [updating, setUpdating] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const [walletSettings, setWalletSettings] = useState<WalletSettings | null>(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'wallet'), d => {
+      if (d.exists()) setWalletSettings(d.data() as WalletSettings);
+    });
+    return () => unsub();
+  }, []);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const hasClaimedToday = user.lastClaimDate === todayStr;
 
   const handleUpdateName = async () => {
     if (!newName.trim() || newName === user.name) {
@@ -37,13 +49,52 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
       await updateDoc(doc(db, 'users', user.phone), {
         name: newName
       });
-      user.name = newName; // Local sync
-      localStorage.setItem('imo_user', JSON.stringify({ ...user, name: newName }));
       setIsEditing(false);
     } catch (err) {
       alert("Failed to update name");
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const claimDailyReward = async () => {
+    if (hasClaimedToday || !walletSettings?.dailyReward || claiming) return;
+
+    setClaiming(true);
+    try {
+      await runTransaction(db, async (transaction) => {
+        const userRef = doc(db, 'users', user.phone);
+        const userSnap = await transaction.get(userRef);
+        if (!userSnap.exists()) throw "User not found";
+        
+        const userData = userSnap.data() as User;
+        if (userData.lastClaimDate === todayStr) throw "Already claimed today";
+
+        const reward = walletSettings.dailyReward || 0;
+        const currentBalance = userData.balance || 0;
+
+        transaction.update(userRef, { 
+          balance: currentBalance + reward,
+          lastClaimDate: todayStr
+        });
+
+        // Add to transaction history
+        const transRef = collection(db, 'transactions');
+        await addDoc(transRef, {
+            userId: user.phone,
+            userName: user.name,
+            type: 'mission',
+            gateway: 'system',
+            amount: reward,
+            status: 'approved',
+            timestamp: serverTimestamp()
+        });
+      });
+      alert(`Success! You earned ৳${walletSettings.dailyReward} as a daily reward.`);
+    } catch (err: any) {
+      alert(err.toString());
+    } finally {
+      setClaiming(false);
     }
   };
 
@@ -55,7 +106,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-        <h1 className="ml-2 text-xl font-bold dark:text-white">Settings</h1>
+        <h1 className="ml-2 text-xl font-bold dark:text-white">Profile & Settings</h1>
       </div>
 
       <div className="p-8 text-center bg-white dark:bg-gray-800/50 mb-6 shadow-sm">
@@ -100,8 +151,41 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </div>
       </div>
 
-      <div className="px-6 space-y-4">
-        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">General</h3>
+      <div className="px-6 space-y-6">
+        {/* Daily Mission Card */}
+        <div>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1 mb-3">Today's Mission</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-[32px] p-6 shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden relative">
+                <div className="absolute top-0 right-0 p-3">
+                    <div className="w-10 h-10 bg-yellow-50 dark:bg-yellow-900/20 rounded-full flex items-center justify-center text-yellow-500">
+                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM13.536 14.95a1 1 0 011.414 0l.707.707a1 1 0 01-1.414 1.414l-.707-.707a1 1 0 010-1.414zM16.243 17.243a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zM9 9a3 3 0 000 6h2a3 3 0 100-6H9z" /></svg>
+                    </div>
+                </div>
+                <div className="pr-12">
+                    <h4 className="font-black text-lg dark:text-white">Daily Login Bonus</h4>
+                    <p className="text-xs text-gray-500 mt-1">লগইন করুন এবং প্রতিদিনের রিওয়ার্ড সংগ্রহ করুন!</p>
+                </div>
+                <div className="mt-6 flex items-center justify-between">
+                    <div>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Reward Amount</p>
+                        <p className="text-2xl font-black text-blue-600 mt-1">৳{(walletSettings?.dailyReward || 0).toFixed(2)}</p>
+                    </div>
+                    <button 
+                        disabled={hasClaimedToday || claiming}
+                        onClick={claimDailyReward}
+                        className={`px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest transition-all ${
+                            hasClaimedToday 
+                            ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed' 
+                            : 'blue-gradient text-white shadow-lg shadow-blue-500/30 active:scale-95'
+                        }`}
+                    >
+                        {claiming ? 'Processing...' : hasClaimedToday ? 'Claimed' : 'Claim Now'}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">General Settings</h3>
         
         <div onClick={toggleDarkMode} className="w-full flex items-center justify-between p-5 bg-white dark:bg-gray-800 rounded-[24px] shadow-sm cursor-pointer active:scale-[0.98] transition-all">
           <div className="flex items-center text-gray-700 dark:text-gray-200">
@@ -119,20 +203,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
           <div className={`w-12 h-6 rounded-full p-1 transition-colors duration-300 ${darkMode ? 'bg-blue-500' : 'bg-gray-200'}`}>
             <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 ${darkMode ? 'translate-x-6' : 'translate-x-0'}`} />
           </div>
-        </div>
-
-        <div className="w-full flex items-center justify-between p-5 bg-white dark:bg-gray-800 rounded-[24px] shadow-sm cursor-pointer active:scale-[0.98] transition-all">
-          <div className="flex items-center text-gray-700 dark:text-gray-200">
-            <div className="p-2 bg-green-50 dark:bg-green-900/30 rounded-xl mr-4">
-              <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 00-2 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-            <span className="font-bold">Privacy & Security</span>
-          </div>
-          <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
         </div>
 
         <button

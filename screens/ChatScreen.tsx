@@ -49,13 +49,14 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ chatId, currentUser, onB
   }, [chatId, currentUser.phone]);
 
   const initiateCall = (type: 'audio' | 'video') => {
+    if (currentUser.isBlocked) return;
     if (!otherUser) return;
     setPendingCallType(type);
     setShowCallConfirm(true);
   };
 
   const handleStartCall = async () => {
-    if (!otherUser) return;
+    if (!otherUser || currentUser.isBlocked) return;
     
     const pricePerMin = pendingCallType === 'video' 
       ? (otherUser.botVideoCallPrice ?? otherUser.botCallPrice ?? 0)
@@ -155,6 +156,10 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ chatId, currentUser, onB
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentUser.isBlocked) {
+      alert("You are blocked from sending messages.");
+      return;
+    }
     if (!inputText.trim()) return;
     const text = inputText;
     setInputText('');
@@ -201,12 +206,20 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ chatId, currentUser, onB
         </div>
 
         <div className="flex items-center space-x-1">
-          <button onClick={() => initiateCall('audio')} className="p-2.5 text-blue-500 dark:text-blue-400 active:scale-90 transition-transform">
+          <button 
+            disabled={currentUser.isBlocked}
+            onClick={() => initiateCall('audio')} 
+            className={`p-2.5 active:scale-90 transition-transform ${currentUser.isBlocked ? 'text-gray-300' : 'text-blue-500 dark:text-blue-400'}`}
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>
           </button>
-          <button onClick={() => initiateCall('video')} className="p-2.5 text-blue-500 dark:text-blue-400 active:scale-90 transition-transform">
+          <button 
+            disabled={currentUser.isBlocked}
+            onClick={() => initiateCall('video')} 
+            className={`p-2.5 active:scale-90 transition-transform ${currentUser.isBlocked ? 'text-gray-300' : 'text-blue-500 dark:text-blue-400'}`}
+          >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 00-2 2z" />
             </svg>
@@ -223,10 +236,39 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ chatId, currentUser, onB
             </div>
           </div>
         ))}
+        {currentUser.isBlocked && (
+          <div className="flex justify-center">
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-500 text-[10px] font-bold px-4 py-2 rounded-full border border-red-100 dark:border-red-900/40">
+              You have been blocked from sending messages by Admin
+            </div>
+          </div>
+        )}
         <div ref={scrollRef} />
       </div>
 
-      {/* Low Balance Modal */}
+      {/* Input Bar */}
+      <div className="p-3 glass border-t border-gray-200 dark:border-gray-800">
+        <form onSubmit={handleSend} className="flex items-center space-x-2">
+          <input
+            type="text"
+            disabled={currentUser.isBlocked}
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder={currentUser.isBlocked ? "Messaging disabled" : "Type a message..."}
+            className={`flex-1 rounded-2xl py-3 px-4 outline-none text-sm ${currentUser.isBlocked ? 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-100 dark:bg-gray-800 dark:text-white'}`}
+          />
+          <button 
+            type="submit" 
+            disabled={currentUser.isBlocked || !inputText.trim()}
+            className={`p-3 rounded-xl shadow-lg transition-all ${currentUser.isBlocked || !inputText.trim() ? 'bg-gray-300 dark:bg-gray-700 text-gray-400 cursor-not-allowed' : 'blue-gradient text-white active:scale-90'}`}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+          </button>
+        </form>
+      </div>
+
+      {/* Modals & Dialogs (Low balance, profiles, etc.) */}
+      {/* ... keeping other modals same as previous version ... */}
       {showLowBalanceModal && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center p-6 animate-in fade-in duration-200">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowLowBalanceModal(false)} />
@@ -259,7 +301,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ chatId, currentUser, onB
         </div>
       )}
 
-      {/* Bot Profile Overlay */}
       {showBotProfile && otherUser && (
         <div className="fixed inset-0 z-[200] flex flex-col bg-gray-50 dark:bg-gray-950 animate-in slide-in-from-bottom duration-300">
           <div className="p-4 glass flex items-center border-b border-gray-100 dark:border-gray-800">
@@ -334,7 +375,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ chatId, currentUser, onB
         </div>
       )}
 
-      {/* Call Confirmation Dialog */}
       {showCallConfirm && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCallConfirm(false)} />
@@ -361,22 +401,6 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ chatId, currentUser, onB
           </div>
         </div>
       )}
-
-      {/* Input Bar */}
-      <div className="p-3 glass border-t border-gray-200 dark:border-gray-800">
-        <form onSubmit={handleSend} className="flex items-center space-x-2">
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-2xl py-3 px-4 outline-none dark:text-white text-sm"
-          />
-          <button type="submit" className="p-3 blue-gradient text-white rounded-xl shadow-lg active:scale-90 transition-all">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-          </button>
-        </form>
-      </div>
     </div>
   );
 };

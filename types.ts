@@ -12,6 +12,7 @@ export interface User {
   balance?: number;
   role?: 'admin' | 'user';
   isBot?: boolean;
+  isBlocked?: boolean;
   isAiEnabled?: boolean;
   openaiKey?: string;
   aiTrainingPrompt?: string;
@@ -19,21 +20,35 @@ export interface User {
   botVideoUrl?: string;
   botCallDuration?: number;
   botMaxCallsPerUser?: number;
-  botCallPrice?: number; // Legacy, keep for backward compatibility
-  botVideoCallPrice?: number; // New: Price per minute for video calls
-  botAudioCallPrice?: number; // New: Price per minute for audio calls
+  botCallPrice?: number;
+  botVideoCallPrice?: number;
+  botAudioCallPrice?: number;
+  lastClaimDate?: string;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  logo: string;
+  type: 'public' | 'private';
+  createdBy: string;
+  admins: string[];
+  members: string[];
+  lastMessage: string;
+  lastMessageTime: Timestamp;
+  createdAt: Timestamp;
 }
 
 export interface Transaction {
   id: string;
   userId: string;
   userName: string;
-  type: 'deposit' | 'withdraw';
-  gateway: 'bkash' | 'nagad' | 'rocket';
+  type: 'deposit' | 'withdraw' | 'mission';
+  gateway: 'bkash' | 'nagad' | 'rocket' | 'system';
   amount: number;
   status: 'pending' | 'approved' | 'rejected';
-  transactionId?: string; // For deposit
-  targetNumber?: string; // For withdraw
+  transactionId?: string;
+  targetNumber?: string;
   timestamp: Timestamp;
 }
 
@@ -43,12 +58,16 @@ export interface WalletSettings {
   rocketNumber: string;
   minDeposit: number;
   minWithdraw: number;
+  dailyReward?: number;
+  groupsEnabled?: boolean; // Added: Control visibility of Groups menu
 }
 
 export interface Message {
   id?: string;
   chatId: string;
   senderPhone: string;
+  senderName?: string;
+  senderImage?: string;
   text: string;
   type: 'text' | 'image' | 'voice';
   timestamp: Timestamp;
@@ -71,4 +90,4 @@ export interface AutoReply {
   response: string;
 }
 
-export type View = 'chats' | 'calls' | 'contacts' | 'profile' | 'admin' | 'bot-settings' | 'bot-ai-config' | 'bot-video-config' | 'bot-call-rate-config' | 'active-call' | 'wallet-deposit' | 'wallet-withdraw' | 'wallet-history';
+export type View = 'chats' | 'calls' | 'contacts' | 'groups' | 'create-group' | 'profile' | 'admin' | 'bot-settings' | 'bot-ai-config' | 'bot-video-config' | 'bot-call-rate-config' | 'active-call' | 'wallet-deposit' | 'wallet-withdraw' | 'wallet-history' | 'group-chat' | 'group-profile';
